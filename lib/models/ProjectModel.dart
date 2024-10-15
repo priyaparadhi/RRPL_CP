@@ -15,6 +15,7 @@ class Project {
   String? createdAt;
   Null? updatedBy;
   String? updatedAt;
+  String? website;
 
   Project(
       {this.userId,
@@ -32,7 +33,8 @@ class Project {
       this.createdBy,
       this.createdAt,
       this.updatedBy,
-      this.updatedAt});
+      this.updatedAt,
+      this.website});
 
   Project.fromJson(Map<String, dynamic> json) {
     userId = json['user_id'];
@@ -51,6 +53,7 @@ class Project {
     createdAt = json['created_at'];
     updatedBy = json['updated_by'];
     updatedAt = json['updated_at'];
+    website = json['website'] ?? '';
   }
 
   Map<String, dynamic> toJson() {

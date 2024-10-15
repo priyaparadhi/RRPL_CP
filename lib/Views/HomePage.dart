@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _pages = [
     Dashboard(),
     CRMPage(),
+    ProjectsPage(),
     PassbookPage(),
     BookingPage(),
   ];
@@ -32,46 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex], // Display the current page
+      body: _pages[_currentIndex], // Display the current page based on index
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         unselectedItemColor: Colors.grey,
         selectedItemColor: Colors.orange,
-        currentIndex: _currentIndex,
+        currentIndex: _currentIndex, // Highlight the selected item
         onTap: (index) {
-          // Navigate to the selected page
-          switch (index) {
-            case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Dashboard()),
-              );
-              break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CRMPage()),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProjectsPage()),
-              );
-              break;
-            case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PassbookPage()),
-              );
-              break;
-            case 4:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => BookingPage()),
-              );
-              break;
-          }
+          setState(() {
+            _currentIndex = index; // Update the selected tab index
+          });
         },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -102,13 +73,6 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     _loadProjects();
-    _fetchStatusUpdates();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Optionally refresh the data when dependencies change (like coming back to this page)
     _fetchStatusUpdates();
   }
 
@@ -534,12 +498,15 @@ class _DashboardState extends State<Dashboard> {
                           style: TextStyle(color: Colors.black, fontSize: 18)),
                       TextButton(
                         onPressed: () {
-                          // Navigate to the filter page
+                          // Navigate to the ProjectsPage and refresh the dashboard when returning
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => ProjectsPage()),
-                          );
+                              builder: (context) => ProjectsPage(),
+                            ),
+                          ).then((_) {
+                            _loadProjects(); // Refresh the dashboard when coming back
+                          });
                         },
                         child: Text('View All',
                             style: TextStyle(color: Colors.orange)),
@@ -574,13 +541,19 @@ class _DashboardState extends State<Dashboard> {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          // Make the onTap handler async
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => AddStoryForm(),
             ),
           );
+
+          // Check if the result is true (story added successfully)
+          if (result == true) {
+            _fetchStatusUpdates(); // Refresh the status updates
+          }
         },
         child: Column(
           children: [
@@ -629,52 +602,64 @@ class _DashboardState extends State<Dashboard> {
       ),
     );
   }
-}
 
-Widget _buildProjectCard(BuildContext context, Project project) {
-  // Construct the full image URL using the provided storage base URL
-  String imageUrl =
-      'https://rrpl-dev.portalwiz.in/api/storage/app/${project.projectThumbnailImg}';
+  Widget _buildProjectCard(BuildContext context, Project project) {
+    // Construct the full image URL using the provided storage base URL
+    String imageUrl =
+        'https://rrpl-dev.portalwiz.in/api/storage/app/${project.projectThumbnailImg}';
 
-  return GestureDetector(
-    onTap: () {
-      // Navigate to the ProjectDetailPage when the card is tapped
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => ProjectDetails(project: project)),
-      );
-    },
-    child: Card(
-      color: Colors.white,
-      child: Container(
-        width: 300,
-        padding: EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              imageUrl, // Use the full URL for the project thumbnail image
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 150,
-                  color: Colors.grey, // Gray box for error handling
-                  child: Center(
-                      child:
-                          Icon(Icons.error, color: Colors.red)), // Error icon
-                );
-              },
-            ),
-            SizedBox(height: 20),
-            Text(project.propertyName ?? 'project name',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text(project.description ?? 'desc',
-                style: TextStyle(color: Colors.black)),
-          ],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the ProjectDetailPage when the card is tapped
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProjectDetails(project: project),
+          ),
+        ).then((_) {
+          // Refresh the dashboard after returning from ProjectDetails page
+          _loadProjects();
+        });
+      },
+      child: Card(
+        color: Colors.white,
+        child: Container(
+          width: 300,
+          padding: EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Image.network(
+                imageUrl,
+                height: 180,
+                width: 300,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 100,
+                    color: Colors.grey,
+                    child: Center(
+                        child:
+                            Icon(Icons.error, color: Colors.red)), // Error icon
+                  );
+                },
+              ),
+              SizedBox(height: 20),
+              Text(
+                project.propertyName ?? 'Project Name',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              Text(
+                project.description ?? 'Description not available',
+                style: TextStyle(color: Colors.black),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

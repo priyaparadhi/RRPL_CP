@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Channel Partner App',
+        title: 'RRPL CP',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           textTheme: GoogleFonts.latoTextTheme(

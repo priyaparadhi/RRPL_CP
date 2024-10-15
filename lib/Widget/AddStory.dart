@@ -16,6 +16,7 @@ class _AddStoryFormState extends State<AddStoryForm> {
   String? link;
   File? _thumbnailImage;
   File? _fullImage;
+  bool _isLoading = false; // Loading state
 
   Future<void> _pickImage(bool isThumbnail) async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -51,6 +52,10 @@ class _AddStoryFormState extends State<AddStoryForm> {
       return;
     }
 
+    setState(() {
+      _isLoading = true; // Set loading state to true
+    });
+
     final success = await ApiCalls.addStatusUpdate(
       userId: '1', // Replace with dynamic user ID if needed
       title: title ?? '',
@@ -60,19 +65,23 @@ class _AddStoryFormState extends State<AddStoryForm> {
       fullImage: _fullImage!,
     );
 
+    setState(() {
+      _isLoading = false; // Set loading state to false
+    });
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Story added successfully!')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true); // Pass true to indicate success
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to add story.')),
       );
+      Navigator.pop(context, false); // Pass false to indicate failure
     }
   }
 
-  // Method to show the full image in a new screen
   void _showFullImage(File imageFile) {
     Navigator.push(
       context,
@@ -122,20 +131,24 @@ class _AddStoryFormState extends State<AddStoryForm> {
                       return null;
                     }),
                     SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState?.validate() ?? false) {
-                          _addStatusUpdate(); // Call API on submit
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      ),
-                      child: Text('Submit Story'),
-                    ),
+
+                    // Show loading indicator or submit button
+                    _isLoading
+                        ? CircularProgressIndicator() // Show loading indicator
+                        : ElevatedButton(
+                            onPressed: () {
+                              if (_formKey.currentState?.validate() ?? false) {
+                                _addStatusUpdate(); // Call API on submit
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 12),
+                            ),
+                            child: Text('Submit Story'),
+                          ),
                   ],
                 ),
               ),
@@ -146,7 +159,6 @@ class _AddStoryFormState extends State<AddStoryForm> {
     );
   }
 
-  // Method to build text fields
   Widget _buildTextField(String label, String? Function(String?) validator) {
     return TextFormField(
       decoration: InputDecoration(
@@ -221,7 +233,6 @@ class _AddStoryFormState extends State<AddStoryForm> {
   }
 }
 
-// New screen for displaying full image
 class FullImageScreen extends StatelessWidget {
   final File imageFile;
 

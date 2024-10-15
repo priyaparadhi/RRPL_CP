@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
+import 'package:rrpl_app/Views/EditProject.dart';
 import 'package:rrpl_app/Widget/FullImage.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,31 +18,30 @@ class ProjectDetails extends StatefulWidget {
 class _ProjectPageState extends State<ProjectDetails> {
   List<bool> _selections = [true, false, false];
   List<String> _configurations = []; // Store configurations here
-  final String websiteUrl = 'https://godrejhomz.com/';
-  final String destinationLatitude = '18.594416045575755';
-  final String destinationLongitude = '73.79301097921467';
+
   int _selectedConfigurationIndex = 0;
   late Future<List<dynamic>> _brokerageSlabs;
   late Future<List<dynamic>> _projectImages;
   late Future<List<dynamic>> _attachments;
   late Future<List<dynamic>> _links;
   late Future<Map<String, dynamic>> _projectDetails;
+  String websiteUrl = ''; // Dynamic website URL
+  String mapLocation = ''; // Dynamic map location
   @override
   void initState() {
     super.initState();
     _fetchConfigurations();
     _brokerageSlabs =
-        ApiCalls().fetchBrokerageSlab(widget.project.projectId ?? 0);
-    _projectImages =
-        ApiCalls().fetchProjectImages(widget.project.projectId ?? 0);
+        ApiCalls.fetchBrokerageSlab(widget.project.projectId ?? 0);
+    _projectImages = ApiCalls.fetchProjectImages(widget.project.projectId ?? 0);
     _attachments =
-        ApiCalls().fetchProjectAttachments(widget.project.projectId ?? 0);
-    _links = ApiCalls().fetchProjectLinks(widget.project.projectId ?? 0);
+        ApiCalls.fetchProjectAttachments(widget.project.projectId ?? 0);
+    _links = ApiCalls.fetchProjectLinks(widget.project.projectId ?? 0);
     _projectDetails =
         ApiCalls.fetchSingleProject(widget.project.projectId ?? 0);
   }
 
-  void _onTogglePressed(int index) async {
+  void _onTogglePressed(int index, Map<String, dynamic> project) async {
     setState(() {
       for (int i = 0; i < _selections.length; i++) {
         _selections[i] = i == index; // Only one toggle active at a time
@@ -49,18 +49,27 @@ class _ProjectPageState extends State<ProjectDetails> {
     });
 
     if (index == 0) {
+      // Open the website using the fetched URL from the API
+      String websiteUrl = project['website'] ?? '';
       _showWebsiteBottomSheet(context, websiteUrl);
     } else if (index == 1) {
-      // Handle Share logic
+      // Handle Share logic here
     } else if (index == 2) {
-      // Handle Directions logic
-      String googleMapsUrl =
-          'https://www.google.com/maps/dir/?api=1&destination=$destinationLatitude,$destinationLongitude';
-      if (!await launchUrl(
-        Uri.parse(googleMapsUrl),
-        mode: LaunchMode.externalApplication,
-      )) {
-        throw Exception('Could not launch $googleMapsUrl');
+      // Handle Directions logic using location from API
+      String? mapLocation = project['map_location']; // Fetch from API response
+
+      if (mapLocation != null && mapLocation.isNotEmpty) {
+        if (!await launchUrl(
+          Uri.parse(mapLocation),
+          mode: LaunchMode.externalApplication,
+        )) {
+          throw Exception('Could not launch $mapLocation');
+        }
+      } else {
+        // Fallback in case mapLocation is not available
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Map location not available')),
+        );
       }
     }
   }
@@ -82,12 +91,39 @@ class _ProjectPageState extends State<ProjectDetails> {
     }
   }
 
+  Future<void> _fetchProjectDetails() async {
+    setState(() {
+      _projectDetails =
+          ApiCalls.fetchSingleProject(widget.project.projectId ?? 0);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Project Details'),
         backgroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit, color: Colors.black), // Edit icon
+            onPressed: () {
+              // Navigate to the EditProject page and refresh after returning
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProject(
+                    projectId:
+                        widget.project.projectId ?? 0, // Pass the project ID
+                  ),
+                ),
+              ).then((_) {
+                // Fetch the updated project details after returning from the edit page
+                _fetchProjectDetails(); // Call the refresh function
+              });
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _projectDetails,
@@ -175,7 +211,8 @@ class _ProjectPageState extends State<ProjectDetails> {
                                   ),
                                 ],
                                 isSelected: _selections,
-                                onPressed: _onTogglePressed,
+                                onPressed: (index) =>
+                                    _onTogglePressed(index, project),
                                 fillColor: Colors.orange, // Color when active
                                 selectedColor:
                                     Colors.white, // Text color when active
@@ -696,12 +733,30 @@ class _ProjectPageState extends State<ProjectDetails> {
     );
   }
 
-  void _launchURL(String url) async {
+  void _launchURL(String websiteUrl) async {
+    if (websiteUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Invalid URL')),
+      );
+      return;
+    }
+
+    // Ensure the URL starts with http or https
+    if (!websiteUrl.startsWith('http://') &&
+        !websiteUrl.startsWith('https://')) {
+      websiteUrl = 'https://$websiteUrl';
+    }
+
+    // Encode the URL
+    final encodedUrl = Uri.encodeFull(websiteUrl);
+
+    print('Launching URL: $encodedUrl'); // Debugging output
+
     if (!await launchUrl(
-      Uri.parse(websiteUrl),
+      Uri.parse(encodedUrl),
       mode: LaunchMode.externalApplication,
     )) {
-      throw Exception('Could not launch $websiteUrl');
+      throw Exception('Could not launch $encodedUrl');
     }
   }
 }

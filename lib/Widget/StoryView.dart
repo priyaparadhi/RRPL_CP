@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StoryView extends StatefulWidget {
@@ -138,23 +139,20 @@ class _StoryViewState extends State<StoryView>
               right: 10,
               child: GestureDetector(
                 onTap: () {
-                  Navigator.pop(context); // Close the story when tapped
+                  Navigator.pop(context);
                 },
                 child: Icon(Icons.close, color: Colors.white),
               ),
             ),
             Positioned(
-              bottom: 50,
+              bottom: 10,
               left: 0,
               right: 0,
               child: Center(
-                child: FadeTransition(
-                  opacity: _animation,
-                  child: Icon(
-                    Icons.arrow_upward,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                child: Lottie.asset(
+                  'assets/images/swipeUp.json',
+                  height: 200,
+                  width: 200,
                 ),
               ),
             ),

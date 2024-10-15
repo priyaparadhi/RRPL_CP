@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
-import 'package:rrpl_app/Views/AddProject.dart';
+
+import 'package:rrpl_app/Views/CreateProject.dart';
 import 'package:rrpl_app/Widget/FilterProject.dart';
 import 'package:rrpl_app/Widget/ProjectDetails.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
@@ -28,15 +29,13 @@ class _ProjectsPageState extends State<ProjectsPage> {
       final allProjectsData = await ApiCalls.fetchProject();
 
       setState(() {
-        // Separate featured and non-featured projects
+        // Separate featured projects
         featuredProjects = allProjectsData
             .where((project) => project['is_featured'] == 1)
             .toList();
 
-        // Filter non-featured projects
-        allProjects = allProjectsData
-            .where((project) => project['is_featured'] != 1)
-            .toList();
+        // Include all projects, both featured and non-featured
+        allProjects = allProjectsData;
 
         isLoadingFeatured = false;
         isLoadingAll = false;
@@ -44,6 +43,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
     } catch (error) {
       // Handle error
       print('Error fetching projects: $error');
+      setState(() {
+        isLoadingFeatured = false;
+        isLoadingAll = false;
+      });
     }
   }
 
@@ -90,10 +93,14 @@ class _ProjectsPageState extends State<ProjectsPage> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
+            // Navigate to CreateProjectPage and refresh projects on return
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AddProject()),
-            );
+              MaterialPageRoute(builder: (context) => CreateProjectPage()),
+            ).then((_) {
+              // Refresh project data after returning
+              _fetchProjects();
+            });
           },
           backgroundColor: Colors.orange,
           child: Icon(Icons.add),
@@ -103,7 +110,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
-  // Build Project List based on whether it's for Featured or All Projects
   Widget _buildProjectsList(List<dynamic> projects) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,12 +228,16 @@ class _ProjectsPageState extends State<ProjectsPage> {
         children: [
           GestureDetector(
             onTap: () {
+              // Navigate to ProjectDetails page and refresh on return
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ProjectDetails(project: project),
                 ),
-              );
+              ).then((_) {
+                // Refresh the project list when returning
+                _fetchProjects();
+              });
             },
             child: Container(
               height: 200,
