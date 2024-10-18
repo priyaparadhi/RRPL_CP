@@ -62,12 +62,12 @@ class _StoryViewState extends State<StoryView>
     if (currentIndex < widget.stories.length - 1) {
       setState(() {
         currentIndex++;
-        progress = 0.0; // Reset progress for the next story
+        progress = 0.0;
       });
-      startProgress(); // Restart progress for the next story
+      startProgress();
     } else {
-      widget.onStoryViewed(); // Mark the story as viewed
-      Navigator.pop(context); // Close story view when the last story is shown
+      widget.onStoryViewed();
+      Navigator.pop(context);
     }
   }
 
@@ -85,10 +85,9 @@ class _StoryViewState extends State<StoryView>
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onTap: showNextStory, // On tap, show the next story
+        onTap: showNextStory,
         onVerticalDragEnd: (details) {
           if (details.primaryVelocity! < 0) {
-            // Swipe-up gesture detected (primaryVelocity < 0 means upward)
             _launchURL(); // Open the link
           }
         },

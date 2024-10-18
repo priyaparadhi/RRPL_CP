@@ -24,12 +24,12 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   final ImagePicker _picker = ImagePicker();
   String _websiteUrl = '';
   String _directions = '';
-  String? _selectedDocument; // For the uploaded document
+  String? _selectedDocument;
   String? _selectedLink;
-  String? _document; // For storing the selected document
-  String? _link; // For storing the added link
+  String? _document;
+  String? _link;
   bool _isFeatured = false;
-
+  List<int> _cpTypeIds = [];
 // For the entered link
 
   @override
@@ -230,11 +230,9 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                       ),
                     ),
                     SizedBox(height: 10),
-                    // Display added brokerage slabs
                     ..._brokerageSlabs.map((slab) {
                       return Column(
-                        crossAxisAlignment: CrossAxisAlignment
-                            .start, // Aligns content to the left
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment
@@ -400,8 +398,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                         _pricingDesc != null &&
                         _description != null &&
                         _uploadedImage != null) {
-                      File projectThumbnail =
-                          File(_uploadedImage!); // Convert image path to File
+                      File projectThumbnail = File(_uploadedImage!);
 
                       // Call the API
                       await ApiCalls.addProjectDetails(
@@ -414,6 +411,12 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                         isFeatured: _isFeatured ? 1 : 0,
                         website: _websiteUrl,
                         projectThumbnailImg: projectThumbnail,
+                        configurations: _configurations,
+                        projectImages: _uploadedImages,
+                        projectAttachments: [],
+                        projectLink: _link ?? '',
+                        brokerageSlabs: _brokerageSlabs,
+                        cpTypeIds: _cpTypeIds,
                       );
 
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -492,37 +495,129 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   }
 
   void _showBrokerageSlabDialog() {
-    String? slab;
+    String? slabValue;
+    String? selectedSlabType; // Track the selected slab type
+    int? selectedCpTypeId; // To store the selected cp_type_id
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Add Brokerage Slab'),
-          content: TextField(
-            onChanged: (value) {
-              slab = value;
-            },
-            decoration: InputDecoration(hintText: 'Enter brokerage slab'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (slab != null && slab!.isNotEmpty) {
-                  setState(() {
-                    _brokerageSlabs.add(slab!);
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Add'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Cancel'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: Text('Add Brokerage Slab'),
+              content: SizedBox(
+                height: 150,
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: ApiCalls.fetchCpTypes(), // Fetch CP types from API
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Failed to load CP Types'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(child: Text('No CP Types available'));
+                    }
+
+                    final cpTypes = snapshot.data!;
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.grey[400]!, width: 1),
+                          ),
+                          child: DropdownButton<String>(
+                            hint: Text(
+                              'Select Slab Type',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            value: selectedSlabType, // Set the current value
+                            isExpanded: true,
+                            underline: SizedBox(),
+                            onChanged: (String? newValue) {
+                              setDialogState(() {
+                                selectedSlabType = newValue;
+                                selectedCpTypeId = cpTypes.firstWhere(
+                                    (cpType) =>
+                                        cpType['cp_type'] ==
+                                        newValue)['cp_type_id'];
+
+                                print(
+                                    'Selected CP Type ID: $selectedCpTypeId'); // Debugging
+                              });
+                            },
+                            items:
+                                cpTypes.map<DropdownMenuItem<String>>((cpType) {
+                              return DropdownMenuItem<String>(
+                                value: cpType['cp_type'],
+                                child: Text(
+                                  cpType['cp_type'],
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        SizedBox(height: 15),
+                        TextField(
+                          onChanged: (value) {
+                            slabValue = value;
+                            print('Slab Value: $slabValue'); // Debugging
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Enter slab value',
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 10),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Colors.grey[400]!,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    if (slabValue != null &&
+                        slabValue!.isNotEmpty &&
+                        selectedCpTypeId != null) {
+                      setState(() {
+                        _brokerageSlabs.add(slabValue!);
+                        _cpTypeIds.add(selectedCpTypeId!);
+                        print('Added Brokerage Slab: $slabValue');
+                        print('Added CP Type ID: $selectedCpTypeId');
+                      });
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: Text('Add'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: Text('Cancel'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -534,13 +629,12 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
     required String value,
     bool isBold = false,
     bool isPricingField = false,
-    double fontSize = 16, // Default font size
+    double fontSize = 16,
   }) {
     return GestureDetector(
       onTap: () => onTap(),
       child: Padding(
-        padding:
-            const EdgeInsets.only(top: 16.0), // Adjust top margin as needed
+        padding: const EdgeInsets.only(top: 16.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -562,7 +656,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
 
   Widget _buildConfigurationSection() {
     return Container(
-      width: double.infinity, // Set to full width
+      width: double.infinity,
       padding: EdgeInsets.all(16),
       margin: EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
@@ -590,14 +684,12 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
           SizedBox(height: 8),
           GestureDetector(
             onTap: () {
-              // Logic to add a new configuration
-              _showConfigurationDialog(); // Implement this function to handle adding a configuration
+              _showConfigurationDialog();
             },
             child: Container(
-              padding: EdgeInsets.symmetric(
-                  vertical: 10), // Padding for the tap area
+              padding: EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.grey[300], // Background color for the tap area
+                color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -606,8 +698,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               ),
             ),
           ),
-          SizedBox(
-              height: 8), // Space between the button and the configurations
+          SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -616,17 +707,14 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _selectedConfigurationIndex =
-                          index; // Update selected index
+                      _selectedConfigurationIndex = index;
                     });
                   },
                   child: Padding(
-                    padding: const EdgeInsets.only(
-                        right: 8.0), // Space between buttons
+                    padding: const EdgeInsets.only(right: 8.0),
                     child: _buildConfigButton(
                       config,
-                      index ==
-                          _selectedConfigurationIndex, // Pass selection state
+                      index == _selectedConfigurationIndex,
                     ),
                   ),
                 );
@@ -665,7 +753,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
           title: Text('Add Configuration'),
           content: TextField(
             onChanged: (value) {
-              newConfiguration = value; // Capture input
+              newConfiguration = value;
             },
             decoration: InputDecoration(hintText: "Enter Configuration"),
           ),
@@ -674,10 +762,9 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               onPressed: () {
                 if (newConfiguration.isNotEmpty) {
                   setState(() {
-                    _configurations
-                        .add(newConfiguration); // Add configuration to list
+                    _configurations.add(newConfiguration);
                   });
-                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop();
                 }
               },
               child: Text('Add'),

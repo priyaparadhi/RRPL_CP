@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
+import 'package:rrpl_app/Views/Booking.dart';
 import 'package:rrpl_app/Views/BookingPage.dart';
 import 'package:rrpl_app/Views/CrmPage.dart';
+import 'package:rrpl_app/Views/EnquiryPage.dart';
 import 'package:rrpl_app/Views/EventPage.dart';
+import 'package:rrpl_app/Views/LoginPage.dart';
 import 'package:rrpl_app/Views/Notification.dart';
 import 'package:rrpl_app/Views/PassbookPage.dart';
 import 'package:rrpl_app/Views/ProjectPage.dart';
 import 'package:rrpl_app/Widget/AddStory.dart';
+import 'package:rrpl_app/Widget/BookingDetails.dart';
 import 'package:rrpl_app/Widget/Filters.dart';
 import 'package:rrpl_app/Widget/ProjectDetails.dart';
 import 'package:rrpl_app/Widget/StoryView.dart';
@@ -179,42 +183,6 @@ class _DashboardState extends State<Dashboard> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.library_books_outlined),
-              title: Text('CRM'),
-              onTap: () {
-                Navigator.pop(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CRMPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.apartment),
-              title: Text('Projects'),
-              onTap: () {
-                Navigator.pop(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProjectsPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.wallet),
-              title: Text('Passbook'),
-              onTap: () {
-                Navigator.pop(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PassbookPage()),
-                );
-              },
-            ),
-            ListTile(
               leading: Icon(Icons.book),
               title: Text('Booking'),
               onTap: () {
@@ -222,7 +190,19 @@ class _DashboardState extends State<Dashboard> {
 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => BookingPage()),
+                  MaterialPageRoute(builder: (context) => BookingDetails()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.edit_document),
+              title: Text('Enquiry'),
+              onTap: () {
+                Navigator.pop(context);
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => EnquiryPage()),
                 );
               },
             ),
@@ -498,14 +478,13 @@ class _DashboardState extends State<Dashboard> {
                           style: TextStyle(color: Colors.black, fontSize: 18)),
                       TextButton(
                         onPressed: () {
-                          // Navigate to the ProjectsPage and refresh the dashboard when returning
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProjectsPage(),
                             ),
                           ).then((_) {
-                            _loadProjects(); // Refresh the dashboard when coming back
+                            _loadProjects();
                           });
                         },
                         child: Text('View All',
@@ -610,14 +589,12 @@ class _DashboardState extends State<Dashboard> {
 
     return GestureDetector(
       onTap: () {
-        // Navigate to the ProjectDetailPage when the card is tapped
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ProjectDetails(project: project),
           ),
         ).then((_) {
-          // Refresh the dashboard after returning from ProjectDetails page
           _loadProjects();
         });
       },

@@ -13,29 +13,31 @@ class Project {
   int? isFeatured;
   int? createdBy;
   String? createdAt;
-  Null? updatedBy;
+  int? updatedBy;
   String? updatedAt;
   String? website;
 
-  Project(
-      {this.userId,
-      this.projectId,
-      this.propertyName,
-      this.description,
-      this.amenities,
-      this.builder,
-      this.address,
-      this.mapLocation,
-      this.projectThumbnailImg,
-      this.pricingDesc,
-      this.city,
-      this.isFeatured,
-      this.createdBy,
-      this.createdAt,
-      this.updatedBy,
-      this.updatedAt,
-      this.website});
+  Project({
+    this.userId,
+    this.projectId,
+    this.propertyName,
+    this.description,
+    this.amenities,
+    this.builder,
+    this.address,
+    this.mapLocation,
+    this.projectThumbnailImg,
+    this.pricingDesc,
+    this.city,
+    this.isFeatured,
+    this.createdBy,
+    this.createdAt,
+    this.updatedBy,
+    this.updatedAt,
+    this.website,
+  });
 
+  // Parsing JSON data into Project object
   Project.fromJson(Map<String, dynamic> json) {
     userId = json['user_id'];
     projectId = json['project_id'];
@@ -46,34 +48,36 @@ class Project {
     address = json['address'] ?? '';
     mapLocation = json['map_location'] ?? '';
     projectThumbnailImg = json['project_thumbnail_img'] ?? '';
-    pricingDesc = json['pricing_desc'];
+    pricingDesc = json['pricing_desc'] ?? '';
     city = json['city'] ?? '';
-    isFeatured = json['is_featured'] ?? '';
-    createdBy = json['created_by'] ?? '';
-    createdAt = json['created_at'];
+    isFeatured = json['is_featured'];
+    createdBy = json['created_by'];
+    createdAt = json['created_at'] ?? '';
     updatedBy = json['updated_by'];
-    updatedAt = json['updated_at'];
+    updatedAt = json['updated_at'] ?? '';
     website = json['website'] ?? '';
   }
 
+  // Converting Project object to JSON
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['user_id'] = this.userId;
-    data['project_id'] = this.projectId;
-    data['property_name'] = this.propertyName;
-    data['description'] = this.description;
-    data['amenities'] = this.amenities;
-    data['builder'] = this.builder;
-    data['address'] = this.address;
-    data['map_location'] = this.mapLocation;
-    data['project_thumbnail_img'] = this.projectThumbnailImg;
-    data['pricing_desc'] = this.pricingDesc;
-    data['city'] = this.city;
-    data['is_featured'] = this.isFeatured;
-    data['created_by'] = this.createdBy;
-    data['created_at'] = this.createdAt;
-    data['updated_by'] = this.updatedBy;
-    data['updated_at'] = this.updatedAt;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['user_id'] = userId;
+    data['project_id'] = projectId;
+    data['property_name'] = propertyName;
+    data['description'] = description;
+    data['amenities'] = amenities;
+    data['builder'] = builder;
+    data['address'] = address;
+    data['map_location'] = mapLocation;
+    data['project_thumbnail_img'] = projectThumbnailImg;
+    data['pricing_desc'] = pricingDesc;
+    data['city'] = city;
+    data['is_featured'] = isFeatured;
+    data['created_by'] = createdBy;
+    data['created_at'] = createdAt;
+    data['updated_by'] = updatedBy;
+    data['updated_at'] = updatedAt;
+    data['website'] = website;
     return data;
   }
 }

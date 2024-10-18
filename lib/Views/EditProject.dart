@@ -1,14 +1,14 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Add this package for image picking
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
-import 'package:url_launcher/url_launcher.dart'; // For handling file system operations
+import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
 
 class EditProject extends StatefulWidget {
-  final int projectId; // Add projectId as a final variable
+  final int projectId;
 
   EditProject({required this.projectId});
   @override
@@ -30,10 +30,10 @@ class _EditProjectPageState extends State<EditProject> {
   final ImagePicker _picker = ImagePicker();
   String _websiteUrl = '';
   String _directions = '';
-  String? _selectedDocument; // For the uploaded document
+  String? _selectedDocument;
   String? _selectedLink;
-  String? _document; // For storing the selected document
-  String? _link; // For storing the added link
+  String? _document;
+  String? _link;
   bool _isFeatured = false;
   List<dynamic> _attachments = [];
   List<dynamic> _projectLinks = [];
@@ -46,7 +46,7 @@ class _EditProjectPageState extends State<EditProject> {
     _fetchProjectDetails();
     _loadProjectImages();
     _fetchConfigurations();
-    _fetchAndSetBrokerageSlabs();
+    //_fetchAndSetBrokerageSlabs();
     _fetchAttachments();
     _fetchLinks();
   }
@@ -98,20 +98,20 @@ class _EditProjectPageState extends State<EditProject> {
     }
   }
 
-  Future<void> _fetchAndSetBrokerageSlabs() async {
-    try {
-      // Call the API to fetch brokerage slabs
-      List<dynamic> fetchedSlabs =
-          await ApiCalls.fetchBrokerageSlab(widget.projectId);
-      setState(() {
-        _brokerageSlabs = fetchedSlabs
-            .map((slab) => slab['brokerage_slab'].toString())
-            .toList();
-      });
-    } catch (error) {
-      print('Failed to fetch brokerage slabs: $error');
-    }
-  }
+  // Future<void> _fetchAndSetBrokerageSlabs() async {
+  //   try {
+  //     // Call the API to fetch brokerage slabs
+  //     List<dynamic> fetchedSlabs =
+  //         await ApiCalls.fetchBrokerageSlab(widget.projectId,);
+  //     setState(() {
+  //       _brokerageSlabs = fetchedSlabs
+  //           .map((slab) => slab['brokerage_slab'].toString())
+  //           .toList();
+  //     });
+  //   } catch (error) {
+  //     print('Failed to fetch brokerage slabs: $error');
+  //   }
+  // }
 
   Future<void> _fetchAttachments() async {
     try {
@@ -404,7 +404,6 @@ class _EditProjectPageState extends State<EditProject> {
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 10),
-                    // Show upload document button only if no document is selected
                     if (_selectedDocument == null)
                       GestureDetector(
                         onTap: _uploadDocument,
@@ -420,7 +419,6 @@ class _EditProjectPageState extends State<EditProject> {
                           ),
                         ),
                       ),
-                    // Display the selected document with an icon
                     if (_selectedDocument != null)
                       Row(
                         children: [
@@ -428,16 +426,18 @@ class _EditProjectPageState extends State<EditProject> {
                               size: 20, color: Colors.blue),
                           SizedBox(width: 8),
                           Expanded(
-                            child: Text('Selected Document: $_selectedDocument',
-                                style: TextStyle(fontSize: 14)),
+                            child: Text(
+                              path.basename(
+                                  _selectedDocument!), // Show only the file name
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ),
                         ],
                       ),
-                    if (_selectedDocument == null)
-                      Text('No document selected.',
-                          style: TextStyle(color: Colors.grey)),
+                    // if (_selectedDocument == null)
+                    //   Text('No document selected.',
+                    //       style: TextStyle(color: Colors.grey)),
                     SizedBox(height: 20),
-                    // Display fetched project attachments
                     if (_attachments.isNotEmpty)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,7 +487,6 @@ class _EditProjectPageState extends State<EditProject> {
                   ],
                 ),
               ),
-
 // Links Section
               SizedBox(height: 20),
               Container(
@@ -540,9 +539,9 @@ class _EditProjectPageState extends State<EditProject> {
                           ),
                         ],
                       ),
-                    if (_selectedLink == null)
-                      Text('No link added.',
-                          style: TextStyle(color: Colors.grey)),
+                    // if (_selectedLink == null)
+                    //   Text('No link added.',
+                    //       style: TextStyle(color: Colors.grey)),
                     SizedBox(height: 20),
                     // Display fetched project links
                     if (_projectLinks.isNotEmpty)
@@ -637,12 +636,9 @@ class _EditProjectPageState extends State<EditProject> {
 
   Future<void> _editProject(BuildContext context) async {
     try {
-      // Prepare projectThumbnailImg field based on whether a new image is uploaded
-      final String? projectThumbnailImg = _uploadedImage!.contains('http')
-          ? null // Keep the existing image if not edited
-          : _uploadedImage;
+      final String? projectThumbnailImg =
+          _uploadedImage!.contains('http') ? null : _uploadedImage;
 
-      // Proceed to edit project details
       final response = await ApiCalls.editProjectDetails(
         projectId: widget.projectId,
         userId: '1',
@@ -685,9 +681,33 @@ class _EditProjectPageState extends State<EditProject> {
   Future<void> _uploadDocument() async {
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.isNotEmpty) {
+      String? filePath = result.files.single.path;
+
       setState(() {
-        _selectedDocument = result.files.single.path;
+        _selectedDocument = filePath;
       });
+
+      int userId = 1;
+      int projectId = widget.projectId;
+
+      bool success =
+          await ApiCalls.addProjectAttachment(userId, projectId, filePath!);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document uploaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload document.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -713,11 +733,31 @@ class _EditProjectPageState extends State<EditProject> {
             ),
             TextButton(
               child: Text('OK'),
-              onPressed: () {
+              onPressed: () async {
                 if (link != null && link!.isNotEmpty) {
                   setState(() {
-                    _selectedLink = link; // Store the entered link
+                    _selectedLink = link;
                   });
+
+                  try {
+                    await ApiCalls.addProjectLink(1, widget.projectId, link!);
+                    // Show a Snackbar indicating success
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Link added successfully!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } catch (e) {
+                    print('Error adding project link: $e');
+                    // Optionally, show an error Snackbar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add link. Please try again.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 }
                 Navigator.of(context).pop();
               },
@@ -743,12 +783,38 @@ class _EditProjectPageState extends State<EditProject> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (slab != null && slab!.isNotEmpty) {
-                  setState(() {
-                    _brokerageSlabs.add(slab!);
-                  });
-                  Navigator.pop(context);
+                  int userId = 1;
+                  int projectId = widget.projectId;
+
+                  List<String> slabs = [slab!];
+
+                  bool success =
+                      await ApiCalls.addBrokerageSlab(userId, projectId, slabs);
+
+                  if (success) {
+                    setState(() {
+                      _brokerageSlabs.add(slab!);
+                    });
+                    Navigator.pop(context);
+
+                    // Show success snackbar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Brokerage slab added successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    print('Failed to add brokerage slab.');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add brokerage slab.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: Text('Add'),

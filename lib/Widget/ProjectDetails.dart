@@ -5,6 +5,7 @@ import 'package:rrpl_app/Views/EditProject.dart';
 import 'package:rrpl_app/Widget/FullImage.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProjectDetails extends StatefulWidget {
@@ -31,8 +32,7 @@ class _ProjectPageState extends State<ProjectDetails> {
   void initState() {
     super.initState();
     _fetchConfigurations();
-    _brokerageSlabs =
-        ApiCalls.fetchBrokerageSlab(widget.project.projectId ?? 0);
+    _fetchBrokerageSlabs();
     _projectImages = ApiCalls.fetchProjectImages(widget.project.projectId ?? 0);
     _attachments =
         ApiCalls.fetchProjectAttachments(widget.project.projectId ?? 0);
@@ -98,6 +98,22 @@ class _ProjectPageState extends State<ProjectDetails> {
     });
   }
 
+  Future<void> _fetchBrokerageSlabs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? cpTypeId =
+        prefs.getInt('cp_type_id'); // Fetch cp_type_id from SharedPreferences
+
+    if (cpTypeId != null) {
+      _brokerageSlabs =
+          ApiCalls.fetchBrokerageSlab(widget.project.projectId ?? 0, cpTypeId);
+    } else {
+      // Handle the case where cp_type_id is not available
+      // You might want to show an error message or set a default value
+      _brokerageSlabs =
+          Future.value([]); // Return an empty list if no cp_type_id found
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,19 +122,16 @@ class _ProjectPageState extends State<ProjectDetails> {
         backgroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.edit, color: Colors.black), // Edit icon
+            icon: Icon(Icons.edit, color: Colors.black),
             onPressed: () {
-              // Navigate to the EditProject page and refresh after returning
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => EditProject(
-                    projectId:
-                        widget.project.projectId ?? 0, // Pass the project ID
+                    projectId: widget.project.projectId ?? 0,
                   ),
                 ),
               ).then((_) {
-                // Fetch the updated project details after returning from the edit page
                 _fetchProjectDetails(); // Call the refresh function
               });
             },
@@ -503,11 +516,11 @@ class _ProjectPageState extends State<ProjectDetails> {
                     );
                   }).toList(),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Valid till 30th June',
-                  style: TextStyle(color: Colors.black),
-                ),
+                // SizedBox(height: 8),
+                // Text(
+                //   'Valid till 30th June',
+                //   style: TextStyle(color: Colors.black),
+                // ),
               ],
             ),
           );

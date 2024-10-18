@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:rrpl_app/Views/EnquiryPage.dart';
+import 'package:rrpl_app/models/BookingModel.dart';
+import 'package:rrpl_app/models/EnquiryModel.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
 import 'package:rrpl_app/models/StoryModel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiCalls {
   static const String baseUrl = 'https://rrpl-dev.portalwiz.in/api/public/api/';
@@ -54,11 +58,15 @@ class ApiCalls {
     }
   }
 
-  static Future<List<dynamic>> fetchBrokerageSlab(int projectId) async {
+  static Future<List<dynamic>> fetchBrokerageSlab(
+      int projectId, int cpTypeId) async {
     final response = await http.post(
       Uri.parse('${baseUrl}fetch_brokerage_slab'),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"project_id": projectId}),
+      body: jsonEncode({
+        "project_id": projectId,
+        "cp_type_id": cpTypeId, // Include cp_type_id in the request
+      }),
     );
 
     if (response.statusCode == 200) {
@@ -229,7 +237,13 @@ class ApiCalls {
     required String pricingDesc,
     required int isFeatured,
     required String website,
+    required List<String> configurations,
+    required List<File> projectImages,
+    required List<File> projectAttachments,
     required File projectThumbnailImg,
+    required String projectLink,
+    required List<String> brokerageSlabs,
+    required List<int> cpTypeIds, // Added parameter for brokerage slabs
   }) async {
     var uri = Uri.parse('${baseUrl}add_project_details');
     var request = http.MultipartRequest('POST', uri);
@@ -243,6 +257,36 @@ class ApiCalls {
     request.fields['pricing_desc'] = pricingDesc;
     request.fields['is_featured'] = isFeatured.toString();
     request.fields['website'] = website;
+    request.fields['project_link'] = projectLink;
+
+    // Add configurations
+    for (int i = 0; i < configurations.length; i++) {
+      request.fields['configuration[$i]'] = configurations[i];
+    }
+
+    // Add brokerage slabs
+
+    for (int i = 0; i < brokerageSlabs.length; i++) {
+      request.fields['brokerage_slab[$i]'] = brokerageSlabs[i];
+
+      request.fields['cp_type_id'] = cpTypeIds[i].toString();
+    }
+
+    // Add project images
+    for (int i = 0; i < projectImages.length; i++) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+            'project_image[$i]', projectImages[i].path),
+      );
+    }
+
+    // Add project attachments
+    for (int i = 0; i < projectAttachments.length; i++) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+            'project_attachment[$i]', projectAttachments[i].path),
+      );
+    }
 
     // Add project thumbnail image
     request.files.add(
@@ -250,7 +294,7 @@ class ApiCalls {
           'project_thumbnail_img', projectThumbnailImg.path),
     );
 
-    // Print request details (URL and fields)
+    // Print request details (URL, fields, and files)
     print('Request URL: ${request.url}');
     print('Request fields: ${request.fields}');
     print(
@@ -380,12 +424,10 @@ class ApiCalls {
     // Send the request
     final response = await request.send();
 
-    // Handle the response
     if (response.statusCode == 200) {
       print('Images uploaded successfully');
     } else {
       print('Failed to upload images: ${response.statusCode}');
-      // You may want to throw an exception or return an error message
     }
   }
 
@@ -396,11 +438,141 @@ class ApiCalls {
   }) async {
     final url = Uri.parse('${baseUrl}add_project_configuration');
 
-    // Prepare request body
     final requestBody = jsonEncode({
       'user_id': userId,
       'project_id': projectId,
       'configuration': configuration,
+    });
+
+    print('Request URL: $url');
+    print('Request Body: $requestBody');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    );
+
+    print('Response Status: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final List<dynamic> responseData = jsonDecode(response.body);
+
+      if (responseData.isNotEmpty && responseData[0] is Map<String, dynamic>) {
+        return responseData[0];
+      } else {
+        throw Exception('Unexpected response format');
+      }
+    } else {
+      throw Exception('Failed to add project configuration');
+    }
+  }
+
+  static Future<bool> addBrokerageSlab(
+      int userId, int projectId, List<String> slabs) async {
+    final url = Uri.parse('${baseUrl}add_brokerage_slab');
+    final headers = {"Content-Type": "application/json"};
+
+    final body = jsonEncode(
+        {"user_id": userId, "project_id": projectId, "brokerage_slab": slabs});
+
+    try {
+      print('Request URL: $url');
+      print('Request Headers: $headers');
+      print('Request Body: $body');
+
+      final response = await http.post(url, headers: headers, body: body);
+
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('Failed to add brokerage slab: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> addProjectAttachment(
+      int userId, int projectId, String attachmentPath) async {
+    final url = Uri.parse('${baseUrl}add_project_attachments');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['user_id'] = userId.toString()
+      ..fields['project_id'] = projectId.toString();
+
+    // Attach the file to the request
+    if (attachmentPath.isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath(
+          'project_attachment', attachmentPath));
+    }
+
+    try {
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        // If the server returns a success response
+        return true;
+      } else {
+        // Handle other status codes or errors
+        print('Failed to add project attachment: ${response.reasonPhrase}');
+        return false;
+      }
+    } catch (e) {
+      print('Error: $e');
+      return false;
+    }
+  }
+
+  static Future<void> addProjectLink(
+      int userId, int projectId, String projectLink) async {
+    final url = Uri.parse('${baseUrl}add_project_links');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'user_id': userId,
+        'project_id': projectId,
+        'project_link': projectLink,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to add project link: ${response.body}');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchCpTypes() async {
+    final response = await http.get(Uri.parse('${baseUrl}cp_type_dropdown'));
+
+    if (response.statusCode == 200) {
+      List data = jsonDecode(response.body);
+      return data
+          .map((e) => {'cp_type_id': e['cp_type_id'], 'cp_type': e['cp_type']})
+          .toList();
+    } else {
+      throw Exception('Failed to load CP Types');
+    }
+  }
+
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
+    final url = Uri.parse('${baseUrl}login');
+
+    // Prepare request body
+    final requestBody = jsonEncode({
+      'email_id': email,
+      'password': password,
     });
 
     // Print the request body
@@ -420,17 +592,124 @@ class ApiCalls {
     print('Response Body: ${response.body}');
 
     if (response.statusCode == 200) {
-      // Parse the response body as a List and return the first element
-      final List<dynamic> responseData = jsonDecode(response.body);
-
-      // Check if the response is not empty and return the first element
-      if (responseData.isNotEmpty && responseData[0] is Map<String, dynamic>) {
-        return responseData[0]; // Return the first object in the list
-      } else {
-        throw Exception('Unexpected response format');
-      }
+      return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to add project configuration');
+      throw Exception('Failed to login');
+    }
+  }
+
+  static Future<List<Project>> fetchProjectsDropdown() async {
+    final response = await http.get(Uri.parse('${baseUrl}project_dropdown'));
+
+    if (response.statusCode == 200) {
+      List jsonResponse = json.decode(response.body);
+      return jsonResponse.map((project) => Project.fromJson(project)).toList();
+    } else {
+      throw Exception('Failed to load projects');
+    }
+  }
+
+  static Future<void> addProjectEnquiry({
+    required int projectId,
+    required String name,
+    required String mobileNo,
+    required String emailId,
+    required String enquiry,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    int userId = prefs.getInt('user_id') ?? 0;
+    print('User ID retrieved from SharedPreferences: $userId');
+
+    // Prepare the request body
+    final Map<String, dynamic> requestBody = {
+      'user_id': userId,
+      'project_id': projectId,
+      'name': name,
+      'mobile_no': mobileNo,
+      'email_id': emailId,
+      'enquiry': enquiry,
+    };
+
+    // Print the request body
+    print('Request Body: ${jsonEncode(requestBody)}');
+
+    final response = await http.post(
+      Uri.parse('${baseUrl}add_project_enquiry'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    // Print the response body
+    print('Response Status Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to submit enquiry');
+    }
+  }
+
+  static Future<List<Enquiry>> fetchProjectEnquiries() async {
+    final response =
+        await http.get(Uri.parse('${baseUrl}fetch_project_enquiries'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonResponse = json.decode(response.body);
+      return jsonResponse.map((data) => Enquiry.fromJson(data)).toList();
+    } else {
+      throw Exception('Failed to load enquiries');
+    }
+  }
+
+  static Future<bool> addBooking({
+    required int userId,
+    required int projectId,
+    required String name,
+    required String mobileNo,
+    required String emailId,
+  }) async {
+    // Prepare request body
+    final requestBody = jsonEncode({
+      'user_id': userId,
+      'project_id': projectId,
+      'name': name,
+      'mobile_no': mobileNo,
+      'email_id': emailId,
+    });
+
+    // Print the request body
+    print('Request Body: $requestBody');
+
+    final response = await http.post(
+      Uri.parse('${baseUrl}add_booking'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    );
+
+    // Print the response body and status code
+    print('Response Status Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  static Future<List<Booking>> fetchBookings() async {
+    final response = await http.get(Uri.parse('${baseUrl}fetch_booking'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonData = json.decode(response.body);
+
+      // Parse the response and convert it to a list of Booking objects
+      return jsonData.map((item) => Booking.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to load bookings');
     }
   }
 }
