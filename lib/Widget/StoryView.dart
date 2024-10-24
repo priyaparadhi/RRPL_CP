@@ -5,12 +5,12 @@ import 'package:url_launcher/url_launcher.dart';
 class StoryView extends StatefulWidget {
   final List<String> stories;
   final VoidCallback onStoryViewed;
-  final String swipeUpLink;
+  final String? swipeUpLink;
 
   StoryView({
     required this.stories,
     required this.onStoryViewed,
-    required this.swipeUpLink,
+    this.swipeUpLink,
   });
 
   @override
@@ -72,11 +72,13 @@ class _StoryViewState extends State<StoryView>
   }
 
   void _launchURL() async {
-    if (!await launchUrl(
-      Uri.parse(widget.swipeUpLink),
-      mode: LaunchMode.externalApplication,
-    )) {
-      throw Exception('Could not launch $widget.swipeUpLink');
+    if (widget.swipeUpLink != null && widget.swipeUpLink!.isNotEmpty) {
+      if (!await launchUrl(
+        Uri.parse(widget.swipeUpLink!),
+        mode: LaunchMode.externalApplication,
+      )) {
+        throw Exception('Could not launch ${widget.swipeUpLink}');
+      }
     }
   }
 
@@ -88,7 +90,7 @@ class _StoryViewState extends State<StoryView>
         onTap: showNextStory,
         onVerticalDragEnd: (details) {
           if (details.primaryVelocity! < 0) {
-            _launchURL(); // Open the link
+            _launchURL(); // Open the link only if available
           }
         },
         child: Stack(
@@ -143,29 +145,31 @@ class _StoryViewState extends State<StoryView>
                 child: Icon(Icons.close, color: Colors.white),
               ),
             ),
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Lottie.asset(
-                  'assets/images/swipeUp.json',
-                  height: 200,
-                  width: 200,
+            if (widget.swipeUpLink != null && widget.swipeUpLink!.isNotEmpty)
+              Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Lottie.asset(
+                    'assets/images/swipeUp.json',
+                    height: 200,
+                    width: 200,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Swipe up to open link',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+            if (widget.swipeUpLink != null && widget.swipeUpLink!.isNotEmpty)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'Swipe up to open link',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

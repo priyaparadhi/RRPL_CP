@@ -81,19 +81,18 @@ class _ViewEnquiryPageState extends State<EnquiryDetailsPage>
             ),
             SizedBox(height: 16),
 
-            // Background container wrapping TabBar, TabBarView, and Edit Button
             Expanded(
               child: Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white, // Background color for this section
-                  borderRadius: BorderRadius.circular(12), // Rounded corners
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.3),
                       spreadRadius: 2,
                       blurRadius: 5,
-                      offset: Offset(0, 3), // Shadow position
+                      offset: Offset(0, 3),
                     ),
                   ],
                 ),
@@ -110,8 +109,6 @@ class _ViewEnquiryPageState extends State<EnquiryDetailsPage>
                       ],
                     ),
                     SizedBox(height: 16),
-
-                    // Tab content with background container
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
@@ -151,7 +148,6 @@ class _ViewEnquiryPageState extends State<EnquiryDetailsPage>
     );
   }
 
-  // Member Details Tab content
   Widget buildMemberDetails() {
     return ListView(
       padding: EdgeInsets.all(16),
@@ -164,12 +160,9 @@ class _ViewEnquiryPageState extends State<EnquiryDetailsPage>
         buildDetailRow("Comment:", "verified lead"),
         buildDetailRow("Project:", "Shapoorji Bavdhan Pune"),
         SizedBox(height: 2),
-        // Edit Button inside the container
         Center(
           child: ElevatedButton(
-            onPressed: () {
-              // Edit functionality
-            },
+            onPressed: () {},
             child: Text('Edit'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,

@@ -73,6 +73,8 @@ class _DashboardState extends State<Dashboard> {
   List<bool> isStoryViewed = [];
   List<Project> _projects = [];
   bool _isLoading = true;
+  int _bookingCount = 0; // Variable to hold booking count
+  bool _isBLoading = true;
   @override
   void initState() {
     super.initState();
@@ -109,6 +111,22 @@ class _DashboardState extends State<Dashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load status updates')),
       );
+    }
+  }
+
+  Future<void> _fetchBookingCount() async {
+    try {
+      int bookingCount = await ApiCalls.fetchBookingCount(); // API call
+      setState(() {
+        _bookingCount = bookingCount; // Update booking count
+        _isLoading = false; // Set loading to false
+      });
+    } catch (e) {
+      // Handle error (you might want to show a message to the user)
+      setState(() {
+        _isLoading = false; // Set loading to false even if there was an error
+      });
+      print(e);
     }
   }
 
@@ -190,7 +208,7 @@ class _DashboardState extends State<Dashboard> {
 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => BookingDetails()),
+                  MaterialPageRoute(builder: (context) => BookingPage()),
                 );
               },
             ),
@@ -380,15 +398,17 @@ class _DashboardState extends State<Dashboard> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text('5',
-                                  style: TextStyle(
-                                      fontSize: 24, color: Colors.white)),
+                              _isLoading
+                                  ? CircularProgressIndicator() // Show loader while fetching
+                                  : Text('$_bookingCount',
+                                      style: TextStyle(
+                                          fontSize: 24, color: Colors.white)),
                               Text('Bookings till date',
                                   style: TextStyle(
                                       fontSize: 16, color: Colors.white)),
                               TextButton(
                                 onPressed: () {
-                                  //Navigate to the filter page
+                                  // Navigate to the filter page
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(

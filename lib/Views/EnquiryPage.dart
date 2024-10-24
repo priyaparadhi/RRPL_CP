@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
 import 'package:rrpl_app/models/EnquiryModel.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
@@ -12,29 +11,52 @@ class EnquiryPage extends StatefulWidget {
 
 class _EnquiryPageState extends State<EnquiryPage> {
   List<Enquiry> enquiries = [];
+  List<Enquiry> filteredEnquiries = [];
   bool isLoading = true; // Loading state
   String? errorMessage;
+  TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchEnquiries(); // Fetch enquiries when the page is initialized
+    _fetchEnquiries();
+
+    searchController.addListener(() {
+      _filterEnquiries();
+    });
   }
 
-  // Fetch enquiries from the API
+  @override
+  void dispose() {
+    searchController.dispose(); // Clean up the controller
+    super.dispose();
+  }
+
   Future<void> _fetchEnquiries() async {
     try {
       List<Enquiry> fetchedEnquiries = await ApiCalls.fetchProjectEnquiries();
       setState(() {
         enquiries = fetchedEnquiries;
-        isLoading = false; // Set loading to false once data is fetched
+        filteredEnquiries = enquiries;
+        isLoading = false;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = 'Failed to load enquiries'; // Handle error state
+        errorMessage = 'Failed to load enquiries';
       });
     }
+  }
+
+  void _filterEnquiries() {
+    String query = searchController.text.toLowerCase();
+    setState(() {
+      filteredEnquiries = enquiries.where((enquiry) {
+        return enquiry.name.toLowerCase().contains(query) ||
+            enquiry.email.toLowerCase().contains(query) ||
+            enquiry.mobile.contains(query);
+      }).toList();
+    });
   }
 
   @override
@@ -43,19 +65,38 @@ class _EnquiryPageState extends State<EnquiryPage> {
       appBar: AppBar(
         title: Text(
           'Enquiries',
-          style: GoogleFonts.poppins(),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator()) // Show loading indicator
+          ? Center(child: CircularProgressIndicator())
           : errorMessage != null
-              ? Center(child: Text(errorMessage!)) // Show error message
-              : ListView.builder(
-                  itemCount: enquiries.length,
-                  itemBuilder: (context, index) {
-                    final enquiry = enquiries[index];
-                    return EnquiryCard(enquiry: enquiry);
-                  },
+              ? Center(child: Text(errorMessage!))
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search by name, email, or mobile',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredEnquiries.length,
+                        itemBuilder: (context, index) {
+                          final enquiry = filteredEnquiries[index];
+                          return EnquiryCard(enquiry: enquiry);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -81,6 +122,7 @@ class EnquiryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
       elevation: 5,
       shape: RoundedRectangleBorder(
@@ -93,23 +135,26 @@ class EnquiryCard extends StatelessWidget {
           children: [
             Text(
               enquiry.name,
-              style: GoogleFonts.poppins(
-                  fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              enquiry.projectName,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
               'Email: ${enquiry.email}',
-              style: GoogleFonts.poppins(),
+              style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 4),
             Text(
               'Mobile: ${enquiry.mobile}',
-              style: GoogleFonts.poppins(),
+              style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 8),
             Text(
               'Enquiry: ${enquiry.enquiry}',
-              style: GoogleFonts.poppins(),
+              style: TextStyle(fontSize: 16),
             ),
           ],
         ),

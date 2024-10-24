@@ -69,7 +69,7 @@ class _BookingFormState extends State<AddBookingPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Booking submitted successfully')),
         );
-        Navigator.pop(context); // Optionally, navigate back or reset the form
+        Navigator.pop(context, true); // Return true to indicate success
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to submit booking')),

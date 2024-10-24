@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
+import 'package:rrpl_app/Views/BookingPage.dart';
 import 'package:rrpl_app/Views/EditProject.dart';
+import 'package:rrpl_app/Widget/BookingSummary.dart';
 import 'package:rrpl_app/Widget/FullImage.dart';
 import 'package:rrpl_app/models/ProjectModel.dart';
 import 'package:share_plus/share_plus.dart';
@@ -18,7 +22,7 @@ class ProjectDetails extends StatefulWidget {
 
 class _ProjectPageState extends State<ProjectDetails> {
   List<bool> _selections = [true, false, false];
-  List<String> _configurations = []; // Store configurations here
+  List<String> _configurations = [];
 
   int _selectedConfigurationIndex = 0;
   late Future<List<dynamic>> _brokerageSlabs;
@@ -26,8 +30,10 @@ class _ProjectPageState extends State<ProjectDetails> {
   late Future<List<dynamic>> _attachments;
   late Future<List<dynamic>> _links;
   late Future<Map<String, dynamic>> _projectDetails;
-  String websiteUrl = ''; // Dynamic website URL
-  String mapLocation = ''; // Dynamic map location
+  String websiteUrl = '';
+  String mapLocation = '';
+  int bookingCount = 5;
+
   @override
   void initState() {
     super.initState();
@@ -240,7 +246,11 @@ class _ProjectPageState extends State<ProjectDetails> {
                         SizedBox(height: 16),
                         _buildConfigurationSection(),
                         SizedBox(height: 16),
+                        _buildBookingCount(context, bookingCount),
+                        SizedBox(height: 16),
                         _buildBrokerageSection(),
+                        SizedBox(height: 16),
+                        _buildProgressbar(),
                         SizedBox(height: 16),
                         _buildDocumentsSection(),
                         SizedBox(height: 16),
@@ -500,27 +510,85 @@ class _ProjectPageState extends State<ProjectDetails> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: slabs.map((slab) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                // Table with headers and data
+                Table(
+                  border: TableBorder.all(color: Colors.grey),
+                  columnWidths: const {
+                    0: FlexColumnWidth(2),
+                    1: FlexColumnWidth(1.5),
+                    2: FlexColumnWidth(2),
+                    3: FlexColumnWidth(2),
+                  },
+                  children: [
+                    // Table Header
+                    TableRow(
+                      decoration: BoxDecoration(color: Colors.grey[200]),
                       children: [
-                        Text(
-                          slab['brokerage_slab'],
-                          style: TextStyle(fontSize: 14),
-                          textAlign: TextAlign.left,
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'Unit',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                        Divider(),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'Value',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'Valid From',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'Valid Till',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ],
-                    );
-                  }).toList(),
+                    ),
+                    // Table Data (dynamic rows)
+                    ...slabs.map((slab) {
+                      // Handle null values with fallback/default values
+                      String brokerageSlab = slab['brokerage_slab'] ?? 'N/A';
+                      String value = slab['value'] ?? 'N/A';
+                      String validFrom = slab['valid_from'] != null
+                          ? _formatDate(slab['valid_from'])
+                          : 'N/A';
+                      String validTill = slab['valid_till'] != null
+                          ? _formatDate(slab['valid_till'])
+                          : 'N/A';
+
+                      return TableRow(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(brokerageSlab),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(value),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(validFrom),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(validTill),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ],
                 ),
-                // SizedBox(height: 8),
-                // Text(
-                //   'Valid till 30th June',
-                //   style: TextStyle(color: Colors.black),
-                // ),
               ],
             ),
           );
@@ -530,6 +598,169 @@ class _ProjectPageState extends State<ProjectDetails> {
       },
     );
   }
+
+// Helper function to format the date
+  String _formatDate(String dateStr) {
+    DateTime date = DateTime.parse(dateStr);
+    return DateFormat('yy/MM/dd').format(date);
+  }
+
+  Widget _buildBookingCount(BuildContext context, int bookingCount) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 4.0,
+            offset: Offset(2, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BookingPage(),
+                ),
+              );
+            },
+            child: Text(
+              'My Bookings for this project',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+            child: Text(
+              '$bookingCount',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // void _showBookingPopup(BuildContext context, int bookingCount) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return Dialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(20),
+  //         ),
+  //         child: Container(
+  //           padding: EdgeInsets.all(20),
+  //           decoration: BoxDecoration(
+  //             color: Colors.white,
+  //             borderRadius: BorderRadius.circular(20),
+  //           ),
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.center,
+  //             children: [
+  //               Text(
+  //                 '💰',
+  //                 style: TextStyle(
+  //                   fontSize: 60,
+  //                 ),
+  //               ),
+  //               SizedBox(height: 16),
+  //               Text(
+  //                 'Congratulations!',
+  //                 style: TextStyle(
+  //                   fontSize: 22,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: Colors.black87,
+  //                 ),
+  //               ),
+  //               SizedBox(height: 8),
+  //               Text(
+  //                 'You are ${10 - bookingCount} bookings away from earning a higher commission!',
+  //                 textAlign: TextAlign.center,
+  //                 style: TextStyle(
+  //                   fontSize: 16,
+  //                   color: Colors.black54,
+  //                 ),
+  //               ),
+  //               SizedBox(height: 20),
+  //               Row(
+  //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //                 children: [
+  //                   ElevatedButton(
+  //                     style: ElevatedButton.styleFrom(
+  //                       padding:
+  //                           EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+  //                       shape: RoundedRectangleBorder(
+  //                         borderRadius: BorderRadius.circular(8),
+  //                       ),
+  //                       backgroundColor: Colors.redAccent, // Button color
+  //                     ),
+  //                     onPressed: () {
+  //                       Navigator.of(context).pop(); // Close the dialog
+  //                     },
+  //                     child: Text(
+  //                       'Close',
+  //                       style: TextStyle(
+  //                         fontSize: 16,
+  //                         color: Colors.white,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   ElevatedButton(
+  //                     style: ElevatedButton.styleFrom(
+  //                       padding:
+  //                           EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+  //                       shape: RoundedRectangleBorder(
+  //                         borderRadius: BorderRadius.circular(8),
+  //                       ),
+  //                       backgroundColor:
+  //                           Color.fromARGB(255, 106, 216, 139), // Button color
+  //                     ),
+  //                     onPressed: () {
+  //                       Navigator.of(context).pop(); // Close the dialog
+  //                       Navigator.push(
+  //                         context,
+  //                         MaterialPageRoute(
+  //                             builder: (context) => BookingSummaryPage()),
+  //                       );
+  //                     },
+  //                     child: Text(
+  //                       'Booking Summary',
+  //                       style: TextStyle(
+  //                         fontSize: 16,
+  //                         color: Colors.white,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   Widget _buildDocumentsSection() {
     return Container(
@@ -602,6 +833,134 @@ class _ProjectPageState extends State<ProjectDetails> {
     );
   }
 
+  Widget _buildProgressbar() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 4.0,
+            offset: Offset(2, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // New Text at the Top
+          Text(
+            'You are 5 bookings away from earning higher commission! 🎉',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          // Estimated Commission
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Estimated Commission:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                '₹5000',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 16),
+
+          // Progress Bar
+          Text(
+            'Progress to next milestone',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: 0.7, // 70% progress
+            backgroundColor: Colors.grey[300],
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+          ),
+          SizedBox(height: 8),
+
+          // Progress Text
+          Text(
+            '70% towards higher commission',
+            style: TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+
+          // // Input Section
+          // Text(
+          //   'Enter Number of Bookings:',
+          //   style: TextStyle(
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 16,
+          //   ),
+          // ),
+          SizedBox(height: 8),
+          TextField(
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[200],
+              hintText: 'Enter Number of Bookings',
+              hintStyle: TextStyle(color: Colors.grey[600]),
+              contentPadding:
+                  EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 8),
+
+          // Projected Commission
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Projected Commission:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                '₹8000',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLinksSection() {
     return Container(
       padding: EdgeInsets.all(16),
@@ -637,8 +996,7 @@ class _ProjectPageState extends State<ProjectDetails> {
                 ),
                 SizedBox(height: 8),
                 ...links.map((link) {
-                  String projectLink =
-                      link['project_link']; // Extract the project link
+                  String projectLink = link['project_link'];
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

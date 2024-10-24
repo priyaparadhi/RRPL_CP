@@ -3,12 +3,14 @@ class Enquiry {
   final String email;
   final String mobile;
   final String enquiry;
+  final String projectName;
 
   Enquiry({
     required this.name,
     required this.email,
     required this.mobile,
     required this.enquiry,
+    required this.projectName,
   });
 
   // From JSON constructor
@@ -18,6 +20,7 @@ class Enquiry {
       email: json['email_id'] ?? 'No email',
       mobile: json['mobile_no'].toString(),
       enquiry: json['enquiry'] ?? 'No enquiry',
+      projectName: json['project_name'] ?? 'N/A',
     );
   }
 }

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // Add this package for image picking
 import 'dart:io';
 
-import 'package:rrpl_app/ApiCalls/ApiCalls.dart'; // For handling file system operations
+import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // For handling file system operations
+import 'package:intl/intl.dart';
 
 class CreateProjectPage extends StatefulWidget {
   @override
@@ -24,13 +26,23 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   final ImagePicker _picker = ImagePicker();
   String _websiteUrl = '';
   String _directions = '';
-  String? _selectedDocument;
+  File? _selectedDocument;
   String? _selectedLink;
   String? _document;
   String? _link;
   bool _isFeatured = false;
   List<int> _cpTypeIds = [];
+  List<String> _slabDescriptions = [];
+  List<DateTime?> _validFromDates = [];
+  List<DateTime?> _validTillDates = [];
+  List<String> _slabValues = [];
+  List<String> _tier = [];
+
 // For the entered link
+  Future<int?> getUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,9 +176,9 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                       ],
                       isSelected: _selections,
                       onPressed: (index) => _onTogglePressed(index),
-                      fillColor: Colors.orange, // Color when active
-                      selectedColor: Colors.white, // Text color when active
-                      color: Colors.black, // Text color when inactive
+                      fillColor: Colors.orange,
+                      selectedColor: Colors.white,
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ],
@@ -176,8 +188,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               // Multiple Photos Section
               SizedBox(height: 20),
               Text('Uploaded Photos',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)), // Title
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 10),
               GestureDetector(
                 onTap: _pickMultipleImages,
@@ -191,7 +202,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               ),
               SizedBox(height: 20),
               Container(
-                width: double.infinity, // Makes the container full width
+                width: double.infinity,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -214,13 +225,11 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                     ),
                     SizedBox(height: 10),
                     GestureDetector(
-                      onTap: _showBrokerageSlabDialog, // Open dialog on tap
+                      onTap: _showBrokerageSlabDialog,
                       child: Container(
-                        padding: EdgeInsets.symmetric(
-                            vertical: 10), // Padding for the tap area
+                        padding: EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors
-                              .grey[300], // Background color for the tap area
+                          color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
@@ -230,24 +239,94 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                       ),
                     ),
                     SizedBox(height: 10),
-                    ..._brokerageSlabs.map((slab) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+// Here we create a table/grid to display the details
+                    if (_brokerageSlabs.isNotEmpty) ...[
+                      Table(
+                        border: TableBorder.all(),
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment
-                                .start, // Aligns text to the start
+                          // Header Row
+                          TableRow(
                             children: [
-                              Expanded(
-                                child:
-                                    Text(slab, style: TextStyle(fontSize: 16)),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text('Unit',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text('Value',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text('Valid From',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text('Valid Till',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
-                          Divider(),
+                          // Data Rows
+                          ...List<TableRow>.generate(_brokerageSlabs.length,
+                              (index) {
+                            return TableRow(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(_brokerageSlabs[index],
+                                      style: TextStyle(fontSize: 12)),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(_slabValues[index],
+                                      style: TextStyle(fontSize: 12)),
+                                ),
+                                // Format date to 'yyyy/MM/dd'
+                                Flexible(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      DateFormat('yy/MM/dd')
+                                          .format(_validFromDates[index]!),
+                                      style: const TextStyle(fontSize: 12),
+                                      maxLines:
+                                          2, // Ensure it doesn't wrap to a new line
+                                      overflow:
+                                          TextOverflow.visible, // No truncation
+                                    ),
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      DateFormat('yy/MM/dd')
+                                          .format(_validTillDates[index]!),
+                                      style: TextStyle(fontSize: 12),
+                                      maxLines:
+                                          2, // Ensure it doesn't wrap to a new line
+                                      overflow:
+                                          TextOverflow.visible, // No truncation
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
                         ],
-                      );
-                    }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -389,43 +468,99 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
                 ),
               ),
               SizedBox(height: 25),
-
               Center(
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (_projectName != null &&
-                        _address != null &&
-                        _pricingDesc != null &&
-                        _description != null &&
-                        _uploadedImage != null) {
-                      File projectThumbnail = File(_uploadedImage!);
+                    int? userId =
+                        await getUserId(); // Fetch userId from SharedPreferences
 
-                      // Call the API
-                      await ApiCalls.addProjectDetails(
-                        userId: '1',
-                        projectName: _projectName!,
-                        description: _description!,
-                        address: _address!,
-                        mapLocation: _directions,
-                        pricingDesc: _pricingDesc!,
-                        isFeatured: _isFeatured ? 1 : 0,
-                        website: _websiteUrl,
-                        projectThumbnailImg: projectThumbnail,
-                        configurations: _configurations,
-                        projectImages: _uploadedImages,
-                        projectAttachments: [],
-                        projectLink: _link ?? '',
-                        brokerageSlabs: _brokerageSlabs,
-                        cpTypeIds: _cpTypeIds,
-                      );
+                    if (userId != null) {
+                      if (_projectName != null &&
+                          _address != null &&
+                          _pricingDesc != null &&
+                          _description != null &&
+                          _uploadedImage != null) {
+                        File projectThumbnail = File(_uploadedImage!);
+                        List<File> projectAttachments = [];
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Project created successfully!')),
-                      );
+                        if (_selectedDocument != null) {
+                          projectAttachments.add(
+                              _selectedDocument!); // Add the selected document to attachments
+                        }
+
+                        // Print the lengths of the lists
+                        print('Brokerage Slabs: ${_brokerageSlabs.length}');
+                        print('CP Type IDs: ${_cpTypeIds.length}');
+                        print('Slab Descriptions: ${_slabDescriptions.length}');
+                        print('Valid From Dates: ${_validFromDates.length}');
+                        print('Valid Till Dates: ${_validTillDates.length}');
+                        print('Slab Values: ${_slabValues.length}');
+
+                        // Check if any of the lists are empty
+                        if (_brokerageSlabs.isNotEmpty &&
+                            _cpTypeIds.isNotEmpty &&
+                            _slabDescriptions.isNotEmpty &&
+                            _validFromDates.isNotEmpty &&
+                            _validTillDates.isNotEmpty &&
+                            _slabValues.isNotEmpty) {
+                          // Call the API
+                          await ApiCalls.addProjectDetails(
+                            userId: userId.toString(), // Use retrieved userId
+                            projectName: _projectName!,
+                            description: _description!,
+                            address: _address!,
+                            mapLocation: _directions,
+                            pricingDesc: _pricingDesc!,
+                            isFeatured: _isFeatured ? 1 : 0,
+                            website: _websiteUrl,
+                            projectThumbnailImg: projectThumbnail,
+                            configurations: _configurations,
+                            projectImages: _uploadedImages,
+                            projectAttachments: projectAttachments,
+                            projectLink: _selectedLink ?? '',
+                            brokerageSlabs: _brokerageSlabs,
+                            cpTypeIds: _cpTypeIds,
+                            slabDescriptions: _slabDescriptions,
+                            validFromDates: _validFromDates,
+                            validTillDates: _validTillDates,
+                            slabValues: _slabValues,
+                            tier: _tier,
+                            activeStatusIds: List.generate(
+                                _brokerageSlabs.length, (index) => 1),
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Project created successfully!')),
+                          );
+                        } else {
+                          String message =
+                              'Please ensure all lists are filled:\n';
+                          if (_brokerageSlabs.isEmpty)
+                            message += '- Brokerage Slabs\n';
+                          if (_cpTypeIds.isEmpty) message += '- CP Type IDs\n';
+                          if (_slabDescriptions.isEmpty)
+                            message += '- Slab Descriptions\n';
+                          if (_validFromDates.isEmpty)
+                            message += '- Valid From Dates\n';
+                          if (_validTillDates.isEmpty)
+                            message += '- Valid Till Dates\n';
+                          if (_slabValues.isEmpty) message += '- Slab Values\n';
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(message)),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Please fill all the fields')),
+                        );
+                      }
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Please fill all the fields')),
+                        SnackBar(
+                            content: Text(
+                                'User ID not found. Please log in again.')),
                       );
                     }
                   },
@@ -447,12 +582,11 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   }
 
   Future<void> _uploadDocument() async {
-    // Logic to upload documents (use file picker or any other method)
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.isNotEmpty) {
       setState(() {
         _selectedDocument =
-            result.files.single.path; // Store the selected document path
+            File(result.files.single.path!); // Convert path to File
       });
     }
   }
@@ -495,9 +629,27 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   }
 
   void _showBrokerageSlabDialog() {
-    String? slabValue;
-    String? selectedSlabType; // Track the selected slab type
-    int? selectedCpTypeId; // To store the selected cp_type_id
+    TextEditingController slabController = TextEditingController();
+    TextEditingController valueController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    TextEditingController tierController = TextEditingController();
+    String? selectedSlabType;
+    int? selectedCpTypeId;
+    DateTime? validFrom;
+    DateTime? validTill;
+
+    Future<void> _selectDate(BuildContext context, DateTime? initialDate,
+        ValueChanged<DateTime?> onDateSelected) async {
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: initialDate ?? DateTime.now(),
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100),
+      );
+      if (pickedDate != null) {
+        onDateSelected(pickedDate);
+      }
+    }
 
     showDialog(
       context: context,
@@ -507,9 +659,9 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
             return AlertDialog(
               title: Text('Add Brokerage Slab'),
               content: SizedBox(
-                height: 150,
+                height: 400,
                 child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: ApiCalls.fetchCpTypes(), // Fetch CP types from API
+                  future: ApiCalls.fetchCpTypes(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Center(child: CircularProgressIndicator());
@@ -521,73 +673,181 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
 
                     final cpTypes = snapshot.data!;
 
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                            border:
-                                Border.all(color: Colors.grey[400]!, width: 1),
-                          ),
-                          child: DropdownButton<String>(
-                            hint: Text(
-                              'Select Slab Type',
-                              style: TextStyle(fontSize: 16),
+                    return SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: Colors.grey[400]!, width: 1),
                             ),
-                            value: selectedSlabType, // Set the current value
-                            isExpanded: true,
-                            underline: SizedBox(),
-                            onChanged: (String? newValue) {
-                              setDialogState(() {
-                                selectedSlabType = newValue;
-                                selectedCpTypeId = cpTypes.firstWhere(
-                                    (cpType) =>
-                                        cpType['cp_type'] ==
-                                        newValue)['cp_type_id'];
-
-                                print(
-                                    'Selected CP Type ID: $selectedCpTypeId'); // Debugging
+                            child: DropdownButtonFormField<String>(
+                              value: selectedSlabType,
+                              decoration: InputDecoration(
+                                  labelText: 'Select Slab Type'),
+                              items: cpTypes.map((cpType) {
+                                return DropdownMenuItem<String>(
+                                  value: cpType[
+                                      'cp_type'], // Ensure this key exists
+                                  child: Text(cpType['cp_type']),
+                                );
+                              }).toList(),
+                              onChanged: (newValue) {
+                                if (cpTypes.isNotEmpty) {
+                                  selectedCpTypeId = cpTypes.firstWhere(
+                                    (cpType) => cpType['cp_type'] == newValue,
+                                    orElse: () => <String, dynamic>{},
+                                  )?['cp_type_id'];
+                                  print(
+                                      'Selected CP Type ID: $selectedCpTypeId');
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 15),
+                          TextField(
+                            controller: slabController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter Unit',
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 10),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[400]!,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          SizedBox(height: 15),
+                          TextField(
+                            controller: valueController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter Value',
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 10),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[400]!,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          SizedBox(height: 15),
+                          TextField(
+                            controller: tierController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter tier',
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 10),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[400]!,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          SizedBox(height: 15),
+                          GestureDetector(
+                            onTap: () {
+                              _selectDate(dialogContext, validFrom, (date) {
+                                setDialogState(() {
+                                  validFrom = date;
+                                });
                               });
                             },
-                            items:
-                                cpTypes.map<DropdownMenuItem<String>>((cpType) {
-                              return DropdownMenuItem<String>(
-                                value: cpType['cp_type'],
-                                child: Text(
-                                  cpType['cp_type'],
-                                  style: TextStyle(fontSize: 16),
+                            child: AbsorbPointer(
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  hintText: validFrom == null
+                                      ? 'Valid From (Select Date)'
+                                      : 'Valid From: ${DateFormat('yyyy/MM/dd').format(validFrom!)}',
+                                  contentPadding: EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 10),
+                                  filled: true,
+                                  fillColor: Colors.grey[200],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey[400]!,
+                                      width: 1,
+                                    ),
+                                  ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        SizedBox(height: 15),
-                        TextField(
-                          onChanged: (value) {
-                            slabValue = value;
-                            print('Slab Value: $slabValue'); // Debugging
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'Enter slab value',
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 10),
-                            filled: true,
-                            fillColor: Colors.grey[200],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: Colors.grey[400]!,
-                                width: 1,
+                                style: TextStyle(fontSize: 16),
                               ),
                             ),
                           ),
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ],
+                          SizedBox(height: 15),
+                          GestureDetector(
+                            onTap: () {
+                              _selectDate(dialogContext, validTill, (date) {
+                                setDialogState(() {
+                                  validTill = date;
+                                });
+                              });
+                            },
+                            child: AbsorbPointer(
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  hintText: validTill == null
+                                      ? 'Valid Till (Select Date)'
+                                      : 'Valid Till: ${DateFormat('yyyy/MM/dd').format(validTill!)}',
+                                  contentPadding: EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 10),
+                                  filled: true,
+                                  fillColor: Colors.grey[200],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey[400]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 15),
+                          TextField(
+                            controller: descriptionController,
+                            decoration: InputDecoration(
+                              hintText: 'Description',
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 10),
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[400]!,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -595,16 +855,32 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    if (slabValue != null &&
-                        slabValue!.isNotEmpty &&
-                        selectedCpTypeId != null) {
+                    // Ensure all fields are filled before adding
+                    if (slabController.text.isNotEmpty &&
+                        selectedCpTypeId != null &&
+                        valueController.text.isNotEmpty &&
+                        validFrom != null &&
+                        validTill != null &&
+                        descriptionController.text.isNotEmpty) {
                       setState(() {
-                        _brokerageSlabs.add(slabValue!);
+                        _brokerageSlabs.add(slabController.text);
                         _cpTypeIds.add(selectedCpTypeId!);
-                        print('Added Brokerage Slab: $slabValue');
-                        print('Added CP Type ID: $selectedCpTypeId');
+                        _slabValues.add(valueController.text);
+                        _validFromDates.add(validFrom!);
+                        _validTillDates.add(validTill!);
+                        _slabDescriptions.add(descriptionController.text);
+                        _tier.add(tierController.text);
                       });
+
+                      print('Added Brokerage Slab: ${slabController.text}');
+                      print('Added CP Type ID: $selectedCpTypeId');
+                      print('Valid From: $validFrom');
+                      print('Valid Till: $validTill');
+                      print('Value: ${valueController.text}');
+                      print('Description: ${descriptionController.text}');
                       Navigator.pop(dialogContext);
+                    } else {
+                      print('Please fill all fields.');
                     }
                   },
                   child: Text('Add'),

@@ -1,31 +1,32 @@
 class Booking {
-  final int userId;
   final int bookingId;
-  final int projectId;
-  final String bookingDate;
   final String name;
-  final String mobile;
-  final String email;
+  final String projectName;
+  final String bookingDate;
+  final String unit;
+  final int isApproved;
+  final String? revenue;
 
   Booking({
-    required this.userId,
     required this.bookingId,
-    required this.projectId,
-    required this.bookingDate,
     required this.name,
-    required this.mobile,
-    required this.email,
+    required this.projectName,
+    required this.bookingDate,
+    required this.unit,
+    required this.isApproved,
+    this.revenue,
   });
 
+  // Factory constructor to create Booking object from JSON
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      userId: json['user_id'],
       bookingId: json['booking_id'],
-      projectId: json['project_id'],
-      bookingDate: json['booking_date'],
       name: json['name'],
-      mobile: json['mobile_no'].toString(),
-      email: json['email_id'],
+      projectName: json['project_name'] ?? 'N/A',
+      bookingDate: json['booking_date'],
+      unit: json['unit'] ?? 'N/A', // Handle null values
+      isApproved: json['is_approved'],
+      revenue: json['revenue'] ?? 'N/A', // Handle null values
     );
   }
 }

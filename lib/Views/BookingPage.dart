@@ -1,23 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
+import 'package:rrpl_app/Widget/AddBooking.dart';
 import 'package:rrpl_app/Widget/BookingDetails.dart';
+import 'package:rrpl_app/models/BookingModel.dart';
+import 'Booking.dart'; // Assuming you have a separate file for the Booking model
 
-class BookingPage extends StatelessWidget {
+class BookingPage extends StatefulWidget {
+  @override
+  _BookingPageState createState() => _BookingPageState();
+}
+
+class _BookingPageState extends State<BookingPage> {
+  late Future<List<Booking>> futureBookings;
+  TextEditingController searchController = TextEditingController();
+  List<Booking> approvedBookings = [];
+  List<Booking> unapprovedBookings = [];
+  List<Booking> filteredApprovedBookings = [];
+  List<Booking> filteredUnapprovedBookings = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  // Fetch bookings and store in state variables
+  void _fetchBookings() async {
+    try {
+      List<Booking> bookings = await ApiCalls.fetchBookings();
+      setState(() {
+        approvedBookings = bookings.where((b) => b.isApproved == 1).toList();
+        unapprovedBookings = bookings.where((b) => b.isApproved == 0).toList();
+        filteredApprovedBookings = approvedBookings;
+        filteredUnapprovedBookings = unapprovedBookings;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      // Handle error if needed
+    }
+  }
+
+  // Filter bookings based on search query
+  void _filterBookings(String query) {
+    setState(() {
+      filteredApprovedBookings = approvedBookings
+          .where((booking) =>
+              booking.name.toLowerCase().contains(query.toLowerCase()) ||
+              booking.projectName.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+      filteredUnapprovedBookings = unapprovedBookings
+          .where((booking) =>
+              booking.name.toLowerCase().contains(query.toLowerCase()) ||
+              booking.projectName.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Number of tabs
+      length: 3, // Number of main tabs
       child: Scaffold(
+        appBar: AppBar(
+          title: Text("Booking"),
+        ),
         body: Column(
           children: [
-            AppBar(
-              title: Text("Booking "),
-            ), // Tabs outside the AppBar
             TabBar(
-              indicatorColor:
-                  Colors.orange, // Indicator color for the active tab
-              labelColor: Colors.black, // Text color for selected tab
-              unselectedLabelColor:
-                  Colors.grey, // Text color for unselected tabs
+              indicatorColor: Colors.orange,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey,
               tabs: [
                 Tab(text: 'My Bookings'),
                 Tab(text: 'Retain'),
@@ -27,71 +83,97 @@ class BookingPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  // First Tab - My Bookings
                   _buildBookingsSection(),
-                  // Second Tab - Retain (Placeholder for now)
                   Center(child: Text('Retain')),
-                  // Third Tab - Cancelled (Placeholder for now)
                   Center(child: Text('Cancelled')),
                 ],
               ),
             ),
           ],
         ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.orange,
+          child: Icon(Icons.add),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddBookingPage()),
+            ).then((_) {
+              _fetchBookings();
+            });
+          },
+        ),
       ),
     );
   }
 
   Widget _buildBookingsSection() {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
     return Column(
       children: [
-        // Search Bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(8.0),
           child: TextField(
+            controller: searchController,
+            onChanged: _filterBookings,
             decoration: InputDecoration(
-              hintText: 'Search bookings',
+              hintText: 'Search bookings...',
+              prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.orange),
               ),
-              suffixIcon: Icon(Icons.search),
             ),
           ),
         ),
-
-        DefaultTabController(
-          length: 2,
-          child: TabBar(
-            indicatorColor: Colors.orange,
-            tabs: [
-              Tab(text: 'Approved'),
-              Tab(text: 'Unapproved'),
-            ],
-          ),
-        ),
-
         Expanded(
-          child: ListView.builder(
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return _buildBookingCard(
-                context: context,
-                unit: 'T3-2506',
-                date: '2021-04-21',
-                revenue: '₹ 1,27,283.94',
-              );
-            },
+          child: DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                TabBar(
+                  indicatorColor: Colors.orange,
+                  tabs: [
+                    Tab(text: 'Approved'),
+                    Tab(text: 'Unapproved'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildBookingList(filteredApprovedBookings),
+                      _buildBookingList(filteredUnapprovedBookings),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
+  Widget _buildBookingList(List<Booking> bookings) {
+    if (bookings.isEmpty) {
+      return Center(child: Text('No bookings available.'));
+    }
+    return ListView.builder(
+      itemCount: bookings.length,
+      itemBuilder: (context, index) {
+        return _buildBookingCard(
+          context: context,
+          booking: bookings[index],
+        );
+      },
+    );
+  }
+
   Widget _buildBookingCard({
     required BuildContext context,
-    required String unit,
-    required String date,
-    required String revenue,
+    required Booking booking,
   }) {
     return InkWell(
       onTap: () {
@@ -112,14 +194,14 @@ class BookingPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Rajashri Dhiraj Makham...',
+                booking.name,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
               ),
               Text(
-                'Godrej Park Ridge Pune',
+                booking.projectName,
                 style: TextStyle(
                   fontSize: 14,
                 ),
@@ -139,9 +221,9 @@ class BookingPage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(unit),
-                  Text(date),
-                  Text(revenue),
+                  Text(booking.unit),
+                  Text(booking.bookingDate),
+                  Text(booking.revenue ?? 'N/A'),
                 ],
               ),
             ],

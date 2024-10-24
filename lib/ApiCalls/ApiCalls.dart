@@ -243,15 +243,31 @@ class ApiCalls {
     required File projectThumbnailImg,
     required String projectLink,
     required List<String> brokerageSlabs,
-    required List<int> cpTypeIds, // Added parameter for brokerage slabs
+    required List<int> cpTypeIds,
+    required List<String> slabDescriptions, // New: Descriptions for slabs
+    required List<DateTime?> validFromDates, // New: Valid From dates
+    required List<DateTime?> validTillDates, // New: Valid Till dates
+    required List<String> slabValues,
+    required List<String> tier,
+    required List<int> activeStatusIds,
   }) async {
+    // Check if required lists are empty
+    if (brokerageSlabs.isEmpty ||
+        cpTypeIds.isEmpty ||
+        slabDescriptions.isEmpty ||
+        validFromDates.isEmpty ||
+        validTillDates.isEmpty ||
+        slabValues.isEmpty) {
+      throw Exception('One or more required lists are empty');
+    }
+
     var uri = Uri.parse('${baseUrl}add_project_details');
     var request = http.MultipartRequest('POST', uri);
 
     // Add fields
     request.fields['user_id'] = userId;
     request.fields['property_name'] = projectName;
-    request.fields['description'] = description;
+    request.fields['descriptions'] = description;
     request.fields['address'] = address;
     request.fields['map_location'] = mapLocation;
     request.fields['pricing_desc'] = pricingDesc;
@@ -265,11 +281,18 @@ class ApiCalls {
     }
 
     // Add brokerage slabs
-
     for (int i = 0; i < brokerageSlabs.length; i++) {
       request.fields['brokerage_slab[$i]'] = brokerageSlabs[i];
-
-      request.fields['cp_type_id'] = cpTypeIds[i].toString();
+      request.fields['cp_type_id[$i]'] = cpTypeIds[i].toString();
+      request.fields['description[$i]'] =
+          slabDescriptions[i]; // Add description
+      request.fields['valid_from[$i]'] =
+          validFromDates[i]!.toIso8601String(); // Convert to ISO 8601 format
+      request.fields['valid_till[$i]'] =
+          validTillDates[i]!.toIso8601String(); // Add valid_till
+      request.fields['value[$i]'] = slabValues[i];
+      request.fields['tier[$i]'] = tier[i];
+      request.fields['active_status_id[$i]'] = '1'; // Add slab value
     }
 
     // Add project images
@@ -378,8 +401,7 @@ class ApiCalls {
           projectThumbnailImg,
         ),
       );
-      print(
-          "Attached Image: $projectThumbnailImg"); // Print attached image path
+      print("Attached Image: $projectThumbnailImg");
     }
 
     try {
@@ -404,7 +426,7 @@ class ApiCalls {
   static Future<void> addProjectImages({
     required int userId,
     required int projectId,
-    required List<File> projectImages, // Expecting a list of image files
+    required List<File> projectImages,
   }) async {
     // Create a multipart request
     var request = http.MultipartRequest(
@@ -704,12 +726,27 @@ class ApiCalls {
     final response = await http.get(Uri.parse('${baseUrl}fetch_booking'));
 
     if (response.statusCode == 200) {
+      // Print the raw response body for debugging
+      print('Response Body: ${response.body}');
+
       List<dynamic> jsonData = json.decode(response.body);
 
       // Parse the response and convert it to a list of Booking objects
       return jsonData.map((item) => Booking.fromJson(item)).toList();
     } else {
       throw Exception('Failed to load bookings');
+    }
+  }
+
+  static Future<int> fetchBookingCount() async {
+    final response = await http.get(Uri.parse('${baseUrl}fetch_booking_count'));
+
+    if (response.statusCode == 200) {
+      // Parse the JSON response
+      final data = json.decode(response.body);
+      return data['project_booking'] as int; // Return the booking count
+    } else {
+      throw Exception('Failed to load booking count');
     }
   }
 }

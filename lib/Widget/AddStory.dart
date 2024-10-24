@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:rrpl_app/ApiCalls/ApiCalls.dart';
 import 'dart:io';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AddStoryForm extends StatefulWidget {
   @override
   _AddStoryFormState createState() => _AddStoryFormState();
@@ -52,12 +54,22 @@ class _AddStoryFormState extends State<AddStoryForm> {
       return;
     }
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? userId = prefs.getInt('user_id');
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User ID not found. Please log in again.')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true; // Set loading state to true
     });
 
     final success = await ApiCalls.addStatusUpdate(
-      userId: '1', // Replace with dynamic user ID if needed
+      userId: userId.toString(),
       title: title ?? '',
       description: description ?? '',
       link: link,
